@@ -11,6 +11,45 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ``` {r}
 library(here)
+library(readr)
+library(tidyverse)
+library(jsonlite)
+options(tibble.width = NULL)
+options(tibble.max_extra_cols = 5)
+
+os <- read_csv("observer samples.csv")
+os$Date <- parse_date(os$Date, format="%m/%d/%Y %H:%M:%S")
+os$TimeCreated <- parse_time(os$`Time Record Created`, format="%m/%d/%Y %H:%M:%S")
+os <- rename(os, OS = `Obs Sample ID`, GPS = `GPS Used`, RevByAsst = `OS Rev by Assistant`, RevByPI = `OS Rev by PI`) 
+vars <- c("OS", "Observer", "Date", "GPS")
+os <- select(os,vars)
+os
+osjson <- toJSON(os[1:2,],force=TRUE, pretty=TRUE) # force set to true so difftime elements are converted to integer seconds since midnight
+osjson
+
+av <- read_csv("avistajes.csv")
+spec(av)
+av <- rename(av, OS = `Obs Sample ID`, AV = `Avistaje ID`, TimeEnc = `Time Enc`, TimeEnd = `Time Left/Lost`, BehEnc = `Beh When Enc`, Notes = `Avistaje Notes`, OtherObs = `Other Observer Present`, RevByAsst = `AV Rev By Assistant`, RevByPI = `AV Rev by PI`)
+av$TimeEnc <- parse_time(av$TimeEnc, format="%m/%d/%Y %H:%M:%S")
+av$TimeEnd <- parse_time(av$TimeEnd, format="%m/%d/%Y %H:%M:%S")
+av$Duration <- av$TimeEnd-av$TimeEnc
+vars <- c("OS", "AV", "Taxon", "Group", "TimeEnc", "TimeEnd","BehEnc","OtherObs","Notes","Duration")
+av <- select(av,vars)
+av
+
+avjson <- toJSON(av[1:2,], force=TRUE, pretty=TRUE) # force set to true so difftime elements are converted to integer seconds since midnight
+avjson
+
+# 1
+osav <- left_join(os, av, by = "OS") # this is equivalent to query in Access; finds all OS and any nested AVs
+#2
+avos <- left_join(av, os, by = "OS") # this doesn't find OSs without AVs, rather only AVs with an OS
+#3
+osav <- full_join(os, av, by = "OS") # this and #4 below are equivalent... should find all cases, where OSs have AVs and not and where AVs have parent OS and not; should give the same as #1 above IF constraints on entering data (all AVs need to have an OS) were met on data entry 
+#4
+avos <- full_join(av, os, by = "OS")
+
+osav
 ```
 
 
