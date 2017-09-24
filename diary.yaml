@@ -1,0 +1,30 @@
+name: Diary
+
+# Which field will we use to display instances of this model in our app
+displayField: datetime
+
+# What color should we use to render this model in our app
+displayColor: "#F44336"
+
+fields:
+  - name: title
+    type: String
+  - name: observer
+    type: Observer
+    lookup: true
+  - name: datetime
+    type: Date
+  - name: location
+    type: Geolocation
+    options:
+      track: true
+  - name: contacts
+    type: [Contact]
+  #- name: adLibitums
+  #  type: [AdLibitum]
+  - name: biologicalSamples
+    type: [BiologicalSample]
+  - name: plantSamples
+    type: [PlantSample]
+  - name: comments
+    type: [String]

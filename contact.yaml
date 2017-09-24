@@ -1,0 +1,40 @@
+name: Contact
+
+# Which field will we use to display instances of this model in our app
+displayField: datetime
+
+# What color should we use to render this model in our app
+displayColor: "#9C27B0"
+
+fields:
+  - name: observer
+    type: [Observer]
+    lookup: true
+  #  required: true
+  - name: datetime
+    type: Date
+  #  required: true
+  - name: location
+    type: Geolocation
+    options:
+      track: true
+  #  required: true
+  - name: subject
+    type: [Subject]
+    lookup: true
+  #  required: true
+  - name: comments
+    type: [String]
+  - name: biologicalSamples
+    type: [BiologicalSample]
+  - name: plantSamples
+    type: [PlantSample]
+  #- name: focalSamples
+  #  type: [FocalSample]
+  #- name: groupScans
+  #  type: [GroupScan]
+  #- name: adLibitums
+  #  type: [AdLibitum]
+  #- name: additionalObservers # think about merging this with the observer as a larger array if possible?
+  #  type: [Observer]
+  #  lookup: true

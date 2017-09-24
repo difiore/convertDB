@@ -14,44 +14,176 @@ library(here)
 library(readr)
 library(tidyverse)
 library(jsonlite)
+library(sofa) # connect to couchDB using sofa package (better than R4CouchDB)
+library(lubridate)
+library(stringr)
+library(yaml)
+library(purrr)
+library(magrittr)
 options(tibble.width = NULL)
 options(tibble.max_extra_cols = 5)
+options(encoding="UTF-8")
 
 os <- read_csv("observer samples.csv")
+# spec(os)
 os$Date <- parse_date(os$Date, format="%m/%d/%Y %H:%M:%S")
 os$TimeCreated <- parse_time(os$`Time Record Created`, format="%m/%d/%Y %H:%M:%S")
 os <- rename(os, OS = `Obs Sample ID`, GPS = `GPS Used`, RevByAsst = `OS Rev by Assistant`, RevByPI = `OS Rev by PI`) 
-vars <- c("OS", "Observer", "Date", "GPS")
+os$docType <- "OS"
+vars <- c("docType","OS", "Observer", "Date", "GPS")
 os <- select(os,vars)
 os
-osjson <- toJSON(os[1:2,],force=TRUE, pretty=TRUE) # force set to true so difftime elements are converted to integer seconds since midnight
-osjson
+
+# convert to JSON
+# osjson <- toJSON(os, force=TRUE, pretty=TRUE) # force set to true so difftime elements are converted to integer seconds since midnight
+# osjson
 
 av <- read_csv("avistajes.csv")
-spec(av)
+# spec(av)
 av <- rename(av, OS = `Obs Sample ID`, AV = `Avistaje ID`, TimeEnc = `Time Enc`, TimeEnd = `Time Left/Lost`, BehEnc = `Beh When Enc`, Notes = `Avistaje Notes`, OtherObs = `Other Observer Present`, RevByAsst = `AV Rev By Assistant`, RevByPI = `AV Rev by PI`)
 av$TimeEnc <- parse_time(av$TimeEnc, format="%m/%d/%Y %H:%M:%S")
 av$TimeEnd <- parse_time(av$TimeEnd, format="%m/%d/%Y %H:%M:%S")
 av$Duration <- av$TimeEnd-av$TimeEnc
-vars <- c("OS", "AV", "Taxon", "Group", "TimeEnc", "TimeEnd","BehEnc","OtherObs","Notes","Duration")
+av$TimeEnc <- as.character(av$TimeEnc)
+av$TimeEnd <- as.character(av$TimeEnd)
+av$Duration <- as.numeric(av$Duration)
+av$docType <- "AV"
+vars <- c("docType", "OS", "AV", "Taxon", "Group", "TimeEnc", "TimeEnd","BehEnc","OtherObs","Notes","Duration")
 av <- select(av,vars)
 av
+# str(av)
 
-avjson <- toJSON(av[1:2,], force=TRUE, pretty=TRUE) # force set to true so difftime elements are converted to integer seconds since midnight
-avjson
+# convert to JSON
+# avjson <- toJSON(av, force=TRUE, pretty=TRUE) # force set to true so difftime elements are converted to integer seconds since midnight
+# avjson
 
 # 1
 osav <- left_join(os, av, by = "OS") # this is equivalent to query in Access; finds all OS and any nested AVs
-#2
+# 2
 avos <- left_join(av, os, by = "OS") # this doesn't find OSs without AVs, rather only AVs with an OS
-#3
+# 3
 osav <- full_join(os, av, by = "OS") # this and #4 below are equivalent... should find all cases, where OSs have AVs and not and where AVs have parent OS and not; should give the same as #1 above IF constraints on entering data (all AVs need to have an OS) were met on data entry 
-#4
-avos <- full_join(av, os, by = "OS")
+# 4
+avos <- full_join(av, os, by = "OS") # this and #3 above are equivalent... 
 
-osav
+osav$docType <- "OSAV"
+vars <- c("docType", "OS", "Observer", "Date", "GPS", "AV", "Taxon", "Group", "TimeEnc", "TimeEnd","BehEnc","OtherObs","Notes","Duration")
+osav <- select(osav,vars)
+osav$Notes <- iconv(osav$Notes, "latin1", "UTF-8") # this needed to deal with funny encoding of some characters # notes field is max of 2000 characters... set by HanDBase
+
 ```
 
 
-## R Markdown
+``` {r}
+# dealing with couchDB
 
+# first we create a connection to CouchDB
+conn <- Cushion$new(host="127.0.0.1",port="5984",user="couchdb",pwd="woolly")
+conn
+ping(conn) # tests connection
+
+# to list the databases present in CouchDB, we use db_list()
+db_list(conn)
+
+db <- "couchtest" # specify the name of a database to delete
+
+# delete this db if it exists already
+if (db %in% db_list(conn)) {
+  db_delete(conn, dbname=db)
+}
+
+# then create it again
+db_create(conn, dbname=db)
+
+# write some OS docs to it
+
+doc_create(conn, os[1:5,], dbname=db, how="rows") # writing directly from tibble, `_id` assigned by couchDB
+
+# or...
+
+# write some OS docs to it
+#for (i in 1:nrow(os)){
+#  doc <- as.list(os[i,])
+#  doc_create(conn,db,doc,docid=os[i,]$OS, how="rows", as="list")
+#}
+
+# or...
+
+# write some OS docs to it
+#for (i in 1:nrow(os)){
+#  doc <- toJSON(os[i,])
+#  doc_create(conn,db,doc,docid=NULL, how="rows", as="json")
+#}
+
+# write some AV docs to it
+
+doc_create(conn, av[1:5,], dbname=db, how="rows")
+
+# write some joined docs to it
+
+doc_create(conn, osav, dbname=db, how="rows")
+
+# return all docs as json
+d <- db_alldocs(conn, dbname=db, include_docs = TRUE, as="json")
+d <- prettify(d)
+d
+
+# return all docs as a list
+d <- db_alldocs(conn, dbname=db, include_docs = TRUE, as="list")
+d
+
+# get info on the db
+i <- db_info(conn, dbname=db)
+
+# doc_count is number of documents
+c <- i$doc_count
+c
+
+# let's pull docs out in a table using QUERIES
+
+x <- NULL
+
+# retrieve *all* docs
+x <- db_query(conn, dbname=db, selector = list(`_id` = list(`$exists` = TRUE)), limit=3000)$docs
+x
+
+# retreive all docs with an AV
+x <- db_query(conn, dbname=db, selector = list(AV = list(`$exists` = TRUE)), limit=3000)$docs
+x
+
+# retreive all docs with particular AV #s
+x <- db_query(conn, dbname=db, selector = list(`$or` = list(list(AV = "AV11065"), list(AV = "AV11066"))), limit=3000)$docs
+x
+
+# retreive all docs with GPS = PP11 - returns a nested list
+x <- db_query(conn, dbname=db, selector = list(GPS = "GPS PP11"), limit=3000)$docs
+x
+
+# note that some returned docs may not include all variables of interest (given that we have different kinds of docs)
+
+# to pull all docs in together and deal with them as a single tibble, we need to extract variables of interest from each document
+
+vars <- c("_id", "_rev", "OS", "Date", "AV","TimeEnc","TimeEnd","Notes", "GPS") # define list of vars
+
+# this will pull out selected variable as a nested list... (note that missing variables are pulled in to list as NULL); we cannot skip straight to map_df() and get a data frame because some of variables will not appear in every doc
+y <- map(x, magrittr::extract, vars) # this works
+y <- map_df(x, magrittr::extract, vars) # this does not...
+
+# so we need to add variable names and convert NULL to NA... now we have a list of docs, each will all of variables of interest (some of which are "NA")
+for (i in 1:length(y)){
+	names(y[[i]]) <- vars
+	y[[i]][sapply(y[[i]], is.null)] <- "NA"
+}
+
+# we can then convert this list of docs to a tibble using extract()
+z <- map_df(y, magrittr::extract, vars)
+
+# and replace text "NA"s with <NA>
+z[z=="NA"] <- NA
+z
+
+
+``` {r}
+obs <- yaml.load_file("contact.yaml", as.named.list = TRUE, handlers = NULL)
+
+```
