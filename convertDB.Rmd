@@ -20,7 +20,7 @@ library(stringr)
 library(yaml)
 library(purrr)
 library(magrittr)
-options(tibble.width = NULL)
+options(tibble.width = Inf)
 options(tibble.max_extra_cols = 5)
 options(encoding="UTF-8")
 
@@ -50,6 +50,8 @@ av$Duration <- as.numeric(av$Duration)
 av$docType <- "AV"
 vars <- c("docType", "OS", "AV", "Taxon", "Group", "TimeEnc", "TimeEnd","BehEnc","OtherObs","Notes","Duration")
 av <- select(av,vars)
+av <- av %>% mutate_all(funs(iconv(.,"latin1","utf-8")))
+# this needed to deal with funny encoding of some characters # notes field is max of 2000 characters... set by HanDBase; note that converting to either utf8 or latin1 is fine
 av
 # str(av)
 
@@ -97,7 +99,7 @@ db_create(conn, dbname=db)
 
 # write some OS docs to it
 
-doc_create(conn, os[1:5,], dbname=db, how="rows") # writing directly from tibble, `_id` assigned by couchDB
+doc_create(conn, os, dbname=db, how="rows") # writing directly from tibble, `_id` assigned by couchDB
 
 # or...
 
@@ -117,7 +119,7 @@ doc_create(conn, os[1:5,], dbname=db, how="rows") # writing directly from tibble
 
 # write some AV docs to it
 
-doc_create(conn, av[1:5,], dbname=db, how="rows")
+doc_create(conn, av, dbname=db, how="rows")
 
 # write some joined docs to it
 
@@ -144,20 +146,30 @@ c
 x <- NULL
 
 # retrieve *all* docs
-x <- db_query(conn, dbname=db, selector = list(`_id` = list(`$exists` = TRUE)), limit=3000)$docs
+x <- db_query(conn, dbname=db, selector = list(`_id` = list(`$exists` = TRUE)), limit=c)$docs
+# limit is set to number of docs in dbase, returned above
 x
 
 # retreive all docs with an AV
-x <- db_query(conn, dbname=db, selector = list(AV = list(`$exists` = TRUE)), limit=3000)$docs
+x <- db_query(conn, dbname=db, selector = list(AV = list(`$exists` = TRUE)), limit=c)$docs
 x
 
 # retreive all docs with particular AV #s
-x <- db_query(conn, dbname=db, selector = list(`$or` = list(list(AV = "AV11065"), list(AV = "AV11066"))), limit=3000)$docs
+x <- db_query(conn, dbname=db, selector = list(`$or` = list(list(AV = "AV11065"), list(AV = "AV11066"))), limit=c)$docs
 x
 
 # retreive all docs with GPS = PP11 - returns a nested list
-x <- db_query(conn, dbname=db, selector = list(GPS = "GPS PP11"), limit=3000)$docs
+x <- db_query(conn, dbname=db, selector = list(GPS = "GPS PP11"), limit=c)$docs
 x
+
+# retreive all docs with a particular docType
+x <- db_query(conn, dbname=db, selector = list(docType = "BS"), limit=c)$docs
+length(x)
+
+# retreive all docs with a particular docType
+x <- db_query(conn, dbname=db, selector = list(docType = "FS"), limit=c)$docs
+length(x)
+
 
 # note that some returned docs may not include all variables of interest (given that we have different kinds of docs)
 
@@ -180,7 +192,17 @@ z <- map_df(y, magrittr::extract, vars)
 
 # and replace text "NA"s with <NA>
 z[z=="NA"] <- NA
-z
+
+
+bs <- read_csv("biological samples.csv")
+bs$docType <- "BS"
+bs <- bs %>% mutate_all(funs(iconv(.,"latin1","utf-8")))
+doc_create(conn, bs, dbname=db, how="rows")
+
+fs <- read_csv("focal samples.csv")
+fs$docType <- "FS"
+fs <- fs %>% mutate_all(funs(iconv(.,"latin1","utf-8")))
+doc_create(conn, fs, dbname=db, how="rows")
 
 
 ``` {r}
