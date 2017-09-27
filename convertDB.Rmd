@@ -193,16 +193,28 @@ z <- map_df(y, magrittr::extract, vars)
 # and replace text "NA"s with <NA>
 z[z=="NA"] <- NA
 
-
+# read in a csv file
 bs <- read_csv("biological samples.csv")
-bs$docType <- "BS"
+# convert all field names to CamelCase with capital 1st letter, keep original internal capitalization of words (e.g., ID not Id), remove other nonletter characters (e.g., parentheses), and convert to . case with each word capitalized
+library(rapportools)
+library(lettercase)
+x <- names(bs)
+x <- x %>% rapportools::tocamel(sep = " ") %>% lettercase::str_collapse_ws() %>% rapportools::tocamel(sep = ".")
+names(bs) <- x
+
+# add in document type
+bs$Document.Type <- "BS"
+
+# convert all fields to UTF-8 to deal with odd characters
 bs <- bs %>% mutate_all(funs(iconv(.,"latin1","utf-8")))
+
+# create couch documents
 doc_create(conn, bs, dbname=db, how="rows")
 
 fs <- read_csv("focal samples.csv")
 fs$docType <- "FS"
 fs <- fs %>% mutate_all(funs(iconv(.,"latin1","utf-8")))
-doc_create(conn, fs, dbname=db, how="rows")
+doc_create(conn, fs[1,], dbname=db, how="rows")
 
 
 ``` {r}
