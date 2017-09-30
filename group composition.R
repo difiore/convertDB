@@ -44,44 +44,44 @@ d <- select(d,-c(Comments, `GPS Used`, `Avistaje Notes`,`Focal Data ID`))
 d$`Focal Animal` <- str_lower(d$`Focal Animal`)
 d$`Partner` <- str_lower(d$`Partner`)
 d$`NN ID` <- str_lower(d$`NN ID`)
-d$`composition` <- str_lower(d$`Group Composition`)
+d$`Composition Cleaned` <- str_lower(d$`Group Composition`)
 d <- d %>% mutate_all(funs(iconv(.,"latin1","utf-8")))
-d$`composition` <- str_replace_all(d$`composition`,"unk/","unknown/")
-d$`composition` <- str_replace_all(d$`composition`,"oikoma/","oikamo/")
-d$`composition` <- str_replace_all(d$`composition`,"violeya/","violeta/")
-d$`composition` <- str_replace_all(d$`composition`,"vioeta/","violeta/")
-d$`composition` <- str_replace_all(d$`composition`,"vioketa/","violeta/")
-d$`composition` <- str_replace_all(d$`composition`,"nenk/","nenki/")
-d$`composition` <- str_replace_all(d$`composition`,"ne.nki/","nenki/")
-d$`composition` <- str_replace_all(d$`composition`,"makis/","maquis/")
-d$`composition` <- str_replace_all(d$`composition`,"maqu.is/","maquis/")
-d$`composition` <- str_replace_all(d$`composition`,"ma.quis/","maquis/")
-d$`composition` <- str_replace_all(d$`composition`,"lliana/","liana/")
-d$`composition` <- str_replace_all(d$`composition`,"l.iana/","liana/")
-d$`composition` <- str_replace_all(d$`composition`,"kauo./","kauo/")
-d$`composition` <- str_replace_all(d$`composition`,"k.auoka/","kauoka/")
-d$`composition` <- str_replace_all(d$`composition`,"evit/","evita/")
-d$`composition` <- str_replace_all(d$`composition`,"elen.a/","elena/")
-d$`composition` <- str_replace_all(d$`composition`,"coatinga/","cotinga/")
-d$`composition` <- str_replace_all(d$`composition`,"aya x/","ayax/")
-d$`composition` <- str_replace_all(d$`composition`,"ayac/","ayax/")
-d$`composition` <- str_replace_all(d$`composition`,"ajax/","ayax/")
-d$`composition` <- str_replace_all(d$`composition`,"au.ra/","aura/")
-d$`composition` <- str_replace_all(d$`composition`,"anaaura/","ana/aura/")
-d$`composition` <- str_replace_all(d$`composition`,"ana./","ana/")
-d$`composition` <- str_replace_all(d$`composition`,"violetaoikamo/","violeta/oikamo/")
-d$`composition` <- str_replace_all(d$`composition`,"taigaandreo/","taiga/andreo/")
-d$`composition` <- str_replace_all(d$`composition`,"sam.my/","sammy/")
-d$`composition` <- str_replace_all(d$`composition`,"oikamoi/","oikamo/")
-d$`composition` <- str_replace_all(d$`composition`,"o.ikamo/","oikamo/")
-d$`composition` <- str_replace_all(d$`composition`,"nika./","nika/")
-d$`composition` <- str_replace_all(d$`composition`,"lucassammy/","lucas/sammy/")
-d$`composition` <- str_replace_all(d$`composition`," /","/")
-d$`composition` <- str_replace_all(d$`composition`,"/ ","/")
-d$`composition` <- str_replace_all(d$`composition`,"\\\r","")
-d$`composition` <- str_replace_all(d$`composition`,"\\\n","")
-d$`composition` <- str_replace_all(d$`composition`,"\\.","")
-d$`Composition Array` <- str_split(d$`composition`,"/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"unk/","unknown/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"oikoma/","oikamo/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"violeya/","violeta/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"vioeta/","violeta/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"vioketa/","violeta/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"nenk/","nenki/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"ne.nki/","nenki/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"makis/","maquis/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"maqu.is/","maquis/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"ma.quis/","maquis/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"lliana/","liana/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"l.iana/","liana/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"kauo./","kauo/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"k.auoka/","kauoka/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"evit/","evita/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"elen.a/","elena/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"coatinga/","cotinga/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"aya x/","ayax/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"ayac/","ayax/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"ajax/","ayax/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"au.ra/","aura/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"anaaura/","ana/aura/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"ana./","ana/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"violetaoikamo/","violeta/oikamo/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"taigaandreo/","taiga/andreo/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"sam.my/","sammy/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"oikamoi/","oikamo/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"o.ikamo/","oikamo/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"nika./","nika/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"lucassammy/","lucas/sammy/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`," /","/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"/ ","/")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"\\\r","")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"\\\n","")
+d$`Composition Cleaned` <- str_replace_all(d$`Composition Cleaned`,"\\.","")
+d$`Composition Array` <- str_split(d$`Composition Cleaned`,"/")
 
 animals <- sort(unique(unlist(d$`Composition Array`)))
 
@@ -93,6 +93,8 @@ for (i in 1:length(d$`Composition Array`)) {
  d$`Composition Array`[[i]] <- unique(d$`Composition Array`[[i]][d$`Composition Array`[[i]] != ""])
 }
 
+saveRDS(d, "d.rds")
+
 r <- tibble()
 for (i in 1:nrow(d)) {
 	n <- indivs %in% d$`Composition Array`[[i]]
@@ -100,47 +102,63 @@ for (i in 1:nrow(d)) {
 }
 
 names(r) <- indivs
-r
+head(r)
 
-
-
+saveRDS(r, "r.rds")
 
 f <- cbind(d,r)
+head(f)
 
-f$y <- year(parse_date_time(f$Date,"mdyHMS", tz="America/Bogota"))
-f$m <- month(parse_date_time(f$Date,"mdyHMS", tz="America/Bogota"))
-f$d <- day(parse_date_time(f$Date,"mdyHMS", tz="America/Bogota"))
-f$tz <- tz(parse_date_time(f$Date,"mdyHMS", tz="America/Bogota"))
+f$Y <- year(f$Date)
+f$m <- month(f$Date)
+f$d <- day(f$Date)
 
-f$newdate <- make_date(year=f$y,month=f$m,day=f$d)
+f$H <- hour(f$`Time Enc`)
+f$M <- minute(f$`Time Enc`)
+f$S <- second(f$`Time Enc`)
 
-f$h <- hour(parse_date_time(f$`Time Enc`,"mdyHMS"))
-f$m <- minute(parse_date_time(f$`Time Enc`,"mdyHMS"))
-f$s <- second(parse_date_time(f$`Time Enc`,"mdyHMS"))
+f$`Time Enc` <- make_datetime(year=f$Y,month=f$m,day=f$d, hour=f$H, min=f$M, sec=f$S)
 
-f$timeenc <- make_datetime(year=year(f$newdate),month=month(f$newdate),day=day(f$newdate), hour=f$h, min=f$m, sec=f$s)
+f$H <- hour(f$`Time Left/Lost`)
+f$M <- minute(f$`Time Left/Lost`)
+f$S <- second(f$`Time Left/Lost`)
 
-f$h <- hour(parse_date_time(f$`Time Left/Lost`,"mdyHMS"))
-f$m <- minute(parse_date_time(f$`Time Left/Lost`,"mdyHMS"))
-f$s <- second(parse_date_time(f$`Time Left/Lost`,"mdyHMS"))
+f$`Time Left/Lost` <- make_datetime(year=f$Y,month=f$m,day=f$d, hour=f$H, min=f$M, sec=f$S)
 
-f$timeend <- make_datetime(year=year(f$newdate),month=month(f$newdate),day=day(f$newdate), hour=f$h, min=f$m, sec=f$s)
+f$H <- hour(f$`Time`)
+f$M <- minute(f$`Time`)
+f$S <- second(f$`Time`)
 
-f$h <- hour(f$Time)
-f$m <- minute(f$`Time`)
-f$s <- second(f$`Time`)
+f$Time <- make_datetime(year=f$Y,month=f$m,day=f$d, hour=f$H, min=f$M, sec=f$S)
+f <- f[with(f, order(Date,Time)), ]
 
-f$Time <- make_datetime(year=year(f$newdate),month=month(f$newdate),day=day(f$newdate), hour=f$h, min=f$m)
+f$H <- hour(f$`Time Start`)
+f$M <- minute(f$`Time Start`)
+f$S <- second(f$`Time Start`)
 
-f$Date <- f$newdate
+f$`Time Start` <- make_datetime(year=f$Y,month=f$m,day=f$d, hour=f$H, min=f$M, sec=f$S)
 
-g <- select(f, -c(`GPS Used`, `Time Enc`, `Time Left/Lost`,`y`,`m`,`d`,`h`,`m`,`s`,`tz`, `timeenc`,`timeend`,`newdate`))
+f$H <- hour(f$`Time End`)
+f$M <- minute(f$`Time End`)
+f$S <- second(f$`Time End`)
+
+f$`Time End` <- make_datetime(year=f$Y,month=f$m,day=f$d, hour=f$H, min=f$M, sec=f$S)
+
+f <- f[with(f, order(Date,Time)), ]
+
+f <- select(f, -c(`Y`,`m`,`d`,`H`,`M`,`S`))
+
+head(f)
+saveRDS(f, "f.rds")
+
+g <- select(f, -c(`Time Enc`, `Time Left/Lost`))
 
 g$Month <- month(g$Date)
 g$Year <- year(g$Date)
 
+head(g)
+
 h <- g %>% group_by(Year, Month) %>% summarise_at (vars(indivs), sum)
-h <- h %>% mutate_all (var(indivs), funs(sqrt))
 
 j <- h %>% ungroup() %>% select(-c(Year,Month))
 j[j > 0] <- 1
@@ -149,8 +167,8 @@ j <- cbind(h$Year,h$Month,j)
 names(j) <- c("Year","Month", indivs)
 j <- j %>% mutate(Date = make_date(year=Year, month=Month, day=15)) %>% select(Date,indivs)
 
-library(dplyr)
-library(tidyr)
-j %>%
+j <- j %>%
 	gather(var, val, 2:ncol(j)) %>%
 	spread(names(j)[1], val)
+
+write_csv(j,"~/Desktop/demography.csv")
