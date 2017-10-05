@@ -1,0 +1,80 @@
+---
+title: "Monthly Reports"
+author: "Tony Di Fiore"
+date: "10/5/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries
+
+``` {r}
+library(here) # for working directory
+library(tidyverse) # for dplyr, readr, stringr, tidyr, tibble, and purrr
+library(lubridate) # supposedly in tidyverse but maybe not
+library(readxl) # to read in xlsx files
+library(lettercase)
+
+options(tibble.width = NULL)
+```
+
+# STEPS
+
+- Open database and query the OS, AV, and FS tables for data collected during the month in question. Export the resulting query as "OS-FS-AV-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+
+- Open `R` and run the following:
+
+``` {r}
+
+d <- read_xlsx("OS-AV-FS-query.xlsx", guess_max = 10000) # guess max set close to length of file
+d <- rowid_to_column(d, "rowID")
+vars <- c("rowID", "observer samples_Obs Sample ID", "Observer", "Date", "GPS Used", "avistajes_Avistaje ID", "Taxon", "Group", "Time Enc", "Time Left/Lost", "Avistaje Notes", "Other Observer Present", "Follow Data Included", "Focal Sample ID", "Focal Animal", "Time Start", "Time End")
+d <- select(d,vars)
+d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`, `Avistaje ID` = `avistajes_Avistaje ID`)
+
+# this bit fixes times
+
+d$Y <- year(d$Date)
+d$m <- month(d$Date)
+d$d <- day(d$Date)
+
+d$H <- hour(d$`Time Enc`)
+d$M <- minute(d$`Time Enc`)
+d$S <- second(d$`Time Enc`)
+
+d$`Time Enc` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+
+d$H <- hour(d$`Time Left/Lost`)
+d$M <- minute(d$`Time Left/Lost`)
+d$S <- second(d$`Time Left/Lost`)
+
+d$`Time Left/Lost` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+
+d$H <- hour(d$`Time Start`)
+d$M <- minute(d$`Time Start`)
+d$S <- second(d$`Time Start`)
+
+d$`Time Start` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+
+d$H <- hour(d$`Time End`)
+d$M <- minute(d$`Time End`)
+d$S <- second(d$`Time End`)
+
+d$`Time End` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+
+d <- d[with(d, order(Date,`Time Enc`)), ]
+
+d <- select(d, -c(`Y`,`m`,`d`,`H`,`M`,`S`))
+
+d <- mutate(d, `Avistaje Duration` = `Time Left/Lost` - `Time Enc`, units="secs")
+d <- mutate(d, `Focal Duration` = `Time End` - `Time Start`, units="secs")
+d <- filter(d, `Avistaje Duration` > 0)
+
+d <- d %>% group_by(`Taxon`, `Observer`, `Focal Animal`)
+output <- summarize(d, count = n(), AVDUR = sum(`Avistaje Duration`, na.rm = T), FSDUR = sum(`Focal Duration`, na.rm = T), meanFS = mean(`Focal Duration`, na.rm = T))
+output
+
+```
