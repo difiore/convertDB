@@ -1,6 +1,6 @@
 ---
-title: "Monthly Reports"
-author: "Tony Di Fiore"
+title: "How to do the Monthly Report"
+author: "Anthony Di Fiore"
 date: "10/5/2017"
 output: html_document
 ---
@@ -9,72 +9,238 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load libraries
-
-``` {r}
+``` {r, include=FALSE} 
 library(here) # for working directory
 library(tidyverse) # for dplyr, readr, stringr, tidyr, tibble, and purrr
 library(lubridate) # supposedly in tidyverse but maybe not
 library(readxl) # to read in xlsx files
 library(lettercase)
-
+library(ggplot2)
+library(knitr)
+source("monthly report functions.R")
 options(tibble.width = NULL)
 ```
 
-# STEPS
+# Writing the Monthly Report
 
-- Open database and query the OS, AV, and FS tables for data collected during the month in question. Export the resulting query as "OS-FS-AV-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+### Version 2017-10-07
+
+## INTRODUCTION
+
+Writing a monthly report is mandatory for everyone participating on one of the *Proyecto Primates* projects in Ecuador. The report should not exceed five pages in length, including quantitative tables but excluding any attached documents (photos, videos, etc.).
+
+As of 2017-10, three separate reports should be done each month, one for the *Comparative Monogamy Project* (sent to Anthony Di Fiore, Max Snodderly, and Eduardo Fernandez-Duque) and one each for the woolly and spider monkey portions of the *Ateline Project* (sent to Anthony Di Fiore, Andres Link, Krista Milich, and Clara Scarry).
+
+The report(s) must be sent before the 7th day of the month following the month that is being reported, and the associated databases should be uploaded by that date as well. We will acknowledge receiving it within a few days, and if you do not get the acknowledgement be sure to send the report again.
+
+The narrative portions of the report should written in PLAIN TEXT using a text editor (e.g., Notepad++, TextWrangler) and then pasted into the appropriate sections of the report template. Tables and figures exported from `R` (see below) should also be copied and pasted into the appropriate sections of the report. The report should be saved with under the filename indicated below: 
+
+- For the *Comparative Monogamy Project*: "MONTHLY REPORT YYYY-MM-DD - Comparative Monogamy Project"
+- For the woolly monkey portion of the *Ateline Project*: "MONTHLY REPORT YYYY-MM-DD - Lagothrix Project"
+- For the spider monkey portion of the *Ateline Project*: "MONTHLY REPORT YYYY-MM-DD - Ateles Project"
+
+While the narrative parts of your report can be in Spanish, the filename MUST be written in English and follow the convention above EXACTLY.
+
+> NOTE: Reports must be done based on information already entered, organized, and cleaned in the database!
+
+Reports should be prepared JOINTLY by all of the individuals responsible for project activities during the month that is being reported, and the names of all those contributing to data collection and to preparation of the report should be included. Reports should be prepared following a team meeting that takes place during the very first few days of the month. We want to “force” each team to get together for lunch or dinner or something to stop and think, to exchange ideas about what went well and what did not go as well the previous month, and to plan collectively for the following month. Such a meeting helps the project *and* helps you become better scientists.
+
+The report will have the following sections:
+
+### 1. HEADER
+
+The first few lines of the report shoud include the following information:
+
+**Date Reported:** YYYY-MM-DD
+
+Always use this convention for writing dates!
+
+**Contributors:** List the full names of all people involved in collecting data this month and preparing the report.
+
+Names should be separated by slashes ("/") with a slash at the end of the last name, just like they are entered in our iOS data collection devices
+
+
+### 2. GENERAL SUMMARY
+
+The summary should have the following components:
+
+2.1 - A narrative section describing the highlights of the team's work during the month.
+
+2.2 - Summary tables reporting general information on the activities of *each person* on the project. This should be generated using `R` code (see below).
+
+2.3 - A summary table reporting general information on the data collected by *each team*. This should be generated using `R` code (see below).
+
+
+### 3. Demography Section
+
+3.1 - A short narrative describing any significant demographic changes to any of your study groups which should include *each* of the following subsections. If a section is not relevant, indicate *NOT APPLICABLE*.
+
+**Births:** (include the date the mother was LAST SEEN without an infant and the date she was FISRT SEEN within an infant)
+
+**Deaths:** (include the date the body was recovered and describe what was done with the collected materials)
+
+**Disappearances:** (include the date the individual was LAST SEEN)
+
+**Immigrations:** (include the date the individual was FIRST SEEN and a description of the individual)
+
+**Emigrations:** (include the date the individual was LAST SEEN in its old group, the date it was FIRST SEEN as a solitary animal, and the date is is FIRST SEEN in a new group, as well as the names of the relevant groups)
+
+> NOTE: Be sure to always use `YYYY-MM-DD` format for dates! It is also helpful to include the ID numbers for relevant avistajes.
+
+Example:
+
+**Emigrations:** Duana was last seen in the group on 2008-10-26 (AVxxxx). She was first seen traveling alone on 2008-10-30 (AVxxx)
+
+3.2 - A summary table of the demography of *each* of the groups under study. This should be generated using `R` code.
+
+Group	Individual	# Unique Days Seen
+
+
+### 4. Collections and Marked Trees Section
+
+4.1 - A summary table of the *biological samples* collected that month from the groups and individuals under study. This should be generated using `R` code.
+
+Group	Individual	DNA?	Hormones?
+
+4.2 - A summary table of the *trees marked* this month. This should be generated using `R` code.
+
+4.3 - A summary table of *plant samples* collected this month. This should be generated using `R` code.
+
+4. Specific Data Sections
+
+
+
+
+
+
+
+#### Generating Table 2.2
+
+- Open the *Proyecto Primates Main Database* and query the `observer samples` and `observer activity data` for data collected during the month in question. Export the resulting query as "OS-OA-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
 
 - Open `R` and run the following:
 
 ``` {r}
+### The following code parses the results of a query of `observer samples` and `observer activity data`  Here, we start with a query of two tables in Access 
 
-d <- read_xlsx("OS-AV-FS-query.xlsx", guess_max = 10000) # guess max set close to length of file
+d <- read_xlsx("OS-OA-query.xlsx", guess_max = 10000) # guess max set close to length of file
 d <- rowid_to_column(d, "rowID")
-vars <- c("rowID", "observer samples_Obs Sample ID", "Observer", "Date", "GPS Used", "avistajes_Avistaje ID", "Taxon", "Group", "Time Enc", "Time Left/Lost", "Avistaje Notes", "Other Observer Present", "Follow Data Included", "Focal Sample ID", "Focal Animal", "Time Start", "Time End")
+vars <- c("rowID", "observer samples_Obs Sample ID", "Observer", "Date", "GPS Used", "Time Start", "Time End", "Activity", "obs activity data_Comments")
 d <- select(d,vars)
-d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`, `Avistaje ID` = `avistajes_Avistaje ID`)
+d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`, `Comments` = `obs activity data_Comments`)
 
-# this bit fixes times
+# obs <- as.character(obsEntryDialog(d)) # uncomment this line for interactive selection of observer names from a list
 
-d$Y <- year(d$Date)
-d$m <- month(d$Date)
-d$d <- day(d$Date)
+obs <- c("Jacopo Cantoni")
 
-d$H <- hour(d$`Time Enc`)
-d$M <- minute(d$`Time Enc`)
-d$S <- second(d$`Time Enc`)
+if (obs != "") {d <- filter(d, `Observer` == obs)}
 
-d$`Time Enc` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+d <- fixdate(d, datefield="Date")
 
-d$H <- hour(d$`Time Left/Lost`)
-d$M <- minute(d$`Time Left/Lost`)
-d$S <- second(d$`Time Left/Lost`)
+daterange <- c("2017-07-01", "2017-07-31")
 
-d$`Time Left/Lost` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+# daterange <- as.Date(as.POSIXct(as.numeric(daterangeEntryDialog(d))*86400,origin="1970-01-01")) # uncomment this line for interactive selection of dates to consider
 
-d$H <- hour(d$`Time Start`)
-d$M <- minute(d$`Time Start`)
-d$S <- second(d$`Time Start`)
+if (length(daterange) > 0) {d <- filter(d, Date >= daterange[1] & Date <= daterange[2])}
 
-d$`Time Start` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+d <- fixtime(d, datefield="Date", timefield=c("Time Start", "Time End"))
+d <- mutate(d, Duration=`Time End`-`Time Start`)
+units(d$Duration) <- "secs"
+d <- mutate(d, `General Activity` = ifelse(grepl("Field work", `Activity`), "Field work",
+																					 ifelse(grepl("Camp - personal", `Activity`), "Camp - personal",
+																					 			 ifelse(grepl("Camp - project work", `Activity`), "Camp - project work",
+																					 			 			 ifelse(grepl("Travel", `Activity`), "Travel",
+																					 			 			 "Other")))))
 
-d$H <- hour(d$`Time End`)
-d$M <- minute(d$`Time End`)
-d$S <- second(d$`Time End`)
+# the following gives the records where the duration of an observer activity is <= 0 seconds... these should be checked and corrected in database
+warnings <- d %>% filter(Duration<=0)
 
-d$`Time End` <- make_datetime(year=d$Y,month=d$m,day=d$d, hour=d$H, min=d$M, sec=d$S)
+if (!is.null(warnings)) {
+	print("WARNING: Check the following rows of observer activity data as the start and end times entered imply that the activity lasted 0 seconds or less!")
+	print(warnings)
+	}
 
-d <- d[with(d, order(Date,`Time Enc`)), ]
+output <- d %>% group_by(`Observer`, `Date`, `General Activity`) %>% summarize(`Duration` = sum(`Duration`, na.rm = T)) %>% spread(`General Activity`, `Duration`, fill = 0, convert = FALSE) %>% mutate(`Total`=`Camp - personal` + `Camp - project work` + `Field work`) %>% ungroup() %>% select(`Observer`, `Date`, `Field work`, `Camp - project work`, `Camp - personal`, `Total`)
 
-d <- select(d, -c(`Y`,`m`,`d`,`H`,`M`,`S`))
+output <- mutate(output, "F" = ifelse(`Field work` > 3600 * 8, 1, 0)) # more than 8 hours field work
+output <- mutate(output, "D" = ifelse(`Camp - project work` > 3600 * 8, 1, 0)) # more than 8 hours project work
+output <- mutate(output, "F+D" = ifelse(`Field work` > 3600 * 4 & `Camp - project work` > 3600 * 4, 1, 0)) # more than 4 hours each of field and project work
+output <- mutate(output, "P+D" = ifelse(`Camp - project work` > 3600 * 4 & `Camp - personal` > 3600 * 4, 1, 0)) # more than 4 hours each of project work and personal time
+output <- mutate(output, "P" = ifelse(`Camp - personal` > 3600 * 8, 1, 0)) # more than 8 hours of personal time
+output <- mutate(output, "TOTAL" = 1)
+units(output$`Field work`) <- "hours"
+units(output$`Camp - personal`) <- "hours"
+units(output$`Camp - project work`) <- "hours"
+units(output$`Total`) <- "hours"
 
-d <- mutate(d, `Avistaje Duration` = `Time Left/Lost` - `Time Enc`, units="secs")
-d <- mutate(d, `Focal Duration` = `Time End` - `Time Start`, units="secs")
-d <- filter(d, `Avistaje Duration` > 0)
+kable(output[,c(1,2,4:7)], digits = 2, caption="Observer Activity by Day")
 
-d <- d %>% group_by(`Taxon`, `Observer`, `Focal Animal`)
-output <- summarize(d, count = n(), AVDUR = sum(`Avistaje Duration`, na.rm = T), FSDUR = sum(`Focal Duration`, na.rm = T), meanFS = mean(`Focal Duration`, na.rm = T))
-output
+output_summary <- group_by(output, `Observer`) %>% summarize(`Field work` = sum(`Field work`), `Camp - project work` = sum(`Camp - project work`), `Camp - personal` = sum(`Camp - personal`), `F`=sum(`F`), `D`=sum(`D`), `F+D`=sum(`F+D`),`P+D`= sum(`P+D`),`P`=sum(`P`), `Total`=sum(`TOTAL`))
 
+kable(output_summary, caption="Observer Activity Summary")
 ```
+
+#### Generating Section 2.3
+
+- Open the *Proyecto Primates Main Database* and query the `observer samples` and `avistajes` tables for data collected during the month in question. Export the resulting query as "OS-AV-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+
+- Open `R` and run the following:
+
+``` {r}
+### The following code parses the results of a query of `observer samples` and `avistajes`
+
+d <- read_xlsx("OS-AV-query.xlsx", guess_max = 10000) # guess max set close to length of file
+d <- rowid_to_column(d, "rowID")
+
+vars <- c("rowID", "observer samples_Obs Sample ID", "Observer", "Date", "GPS Used", "Avistaje ID", "Taxon", "Group", "Time Enc", "Time Left/Lost", "Other Observer Present", "Found in Sleep Tree", "Left in Sleep Tree")
+
+d <- select(d,vars)
+d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`)
+
+obs <- c("Jacopo Cantoni")
+
+if (obs != "") {d <- filter(d, `Observer` == obs)}
+
+d <- fixdate(d, datefield="Date")
+
+daterange <- c("2017-07-01", "2017-07-31")
+
+if (length(daterange) > 0) {d <- filter(d, Date >= daterange[1] & Date <= daterange[2])}
+
+d <- fixtime(d, datefield="Date", timefield=c("Time Enc", "Time Left/Lost"))
+d <- mutate(d, Duration=`Time Left/Lost`-`Time Enc`)
+units(d$Duration) <- "secs"
+
+# the following gives the records where the duration of an avistaje is <= 0 seconds... these should be checked and corrected in database
+warnings <- d %>% filter(Duration < 0 | is.na(Duration))
+
+if (!is.null(warnings)) {
+	print("WARNING: Check the following rows of observer activity data as the start and end times entered imply that the activity lasted less than 0 seconds or that either Time Enc or Time Left/Lost = NA!")
+	print(warnings)
+	}
+
+d <- filter(d, `Duration` > 0) # only where AV duration is >0
+
+taxon <- c("Pithecia", "Callicebus")
+d <- filter(d, `Taxon` %in% taxon)
+
+output <- d %>% group_by(`Observer`, `Date`, `Taxon`, `Group`) %>% summarize(`AV Count`=n(), `Duration (hours)`=sum(`Duration`, na.rm = T))
+units(output$`Duration (hours)`) <- "hours"
+
+kable(output, digits=3, caption="Avistajes by Day")
+
+output_summary <- group_by(output,`Observer`,`Taxon`, `Group`) %>% summarize(`AV Count`=sum(`AV Count`), `Duration (hours)`=sum(`Duration (hours)`))
+units(output_summary$`Duration (hours)`) <- "hours"
+
+kable(output_summary, digits=3, caption="Avistaje Summary")
+```
+
+
+#### Generating Section 3.2
+
+- Open the *Proyecto Primates Main Database* and query the `observer samples`, `avistajes`, and `roll call demography` tables for data collected during the month in question. Export the resulting query as "OS-AV-RCD-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+
+- Open `R` and run the following:
+
+``` {r}
+### The following code parses the results of a query of `observer samples` and `avistajes`
