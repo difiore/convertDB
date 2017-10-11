@@ -1,20 +1,27 @@
-fixdate <- function(x, datefield="Date"){
-	Y <- year(x[[datefield]])
-	m <- month(x[[datefield]])
-	d <- day(x[[datefield]])
-	x[[datefield]] <- make_date(year=Y,month=m,day=d)
+fixdate <- function(x, datefield){
+	for (i in datefield){
+		Y <- year(x[[i]])
+		m <- month(x[[i]])
+		d <- day(x[[i]])
+		x[[i]] <- make_date(year=Y,month=m,day=d)
+	}
 	return(x)
 }
 
-fixtime <- function(x, datefield="Date", timefield){
+fixtime <- function(x, datefield, timefield, offsetFromGMT, timezone){
 	for (i in timefield) {
 		Y <- year(x[[datefield]])
 		m <- month(x[[datefield]])
 		d <- day(x[[datefield]])
-		H <- hour(x[[i]])
-		M <- minutes(x[[i]])
+		H <- hour(x[[i]]) # local hour
+		H <- H - offsetFromGMT # hour GMT
+		temp <- as.tibble(cbind(H,d))
+		temp <- mutate(temp,newH=ifelse(H>=24,H-24,H),newD=ifelse(H>=24,d+1,d))
+		H <- temp$newH
+		d <- temp$newD
+		M <- minute(x[[i]])
 		S <- second(x[[i]])
-		x[[i]] <- make_datetime(year=Y,month=m,day=d, hour=H, min=M, sec=S)
+		x[[i]] <- make_datetime(year=Y,month=m,day=d, hour=H, min=M, sec=S, tz=timezone)
 	}
 	return(x)
 }

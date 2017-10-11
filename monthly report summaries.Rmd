@@ -17,8 +17,8 @@ library(readxl) # to read in xlsx files
 library(lettercase)
 library(ggplot2)
 library(knitr)
+library(sqldf)
 source("monthly report functions.R")
-options(tibble.width = NULL)
 ```
 
 # Writing the Monthly Report
@@ -93,67 +93,73 @@ Example:
 
 3.2 - A summary table of the demography of *each* of the groups under study. This should be generated using `R` code.
 
-Group	Individual	# Unique Days Seen
-
 
 ### 4. Collections and Marked Trees Section
 
 4.1 - A summary table of the *biological samples* collected that month from the groups and individuals under study. This should be generated using `R` code.
 
-Group	Individual	DNA?	Hormones?
+
 
 4.2 - A summary table of the *trees marked* this month. This should be generated using `R` code.
 
 4.3 - A summary table of *plant samples* collected this month. This should be generated using `R` code.
 
-4. Specific Data Sections
+
+#### 5. Specific Data Sections
 
 
+#### Set up observers, dates, and taxa of interest
 
+``` {r}
+rm(list=c("observers","daterange","taxa"))
 
+observers <- c("Jacopo Cantoni")
+daterange <- c("2017-07-01", "2017-07-31")
+taxa <- c("Pithecia", "Callicebus")
+# observers <- as.character(obsEntryDialog(d)) # uncomment this line for interactive selection of observer names from a list
+# daterange <- as.Date(as.POSIXct(as.numeric(daterangeEntryDialog(d))*86400,origin="1970-01-01")) # uncomment this line for interactive selection of dates to consider
+```
 
-
-
-#### Generating Table 2.2
+#### Generating Section 2.2
 
 - Open the *Proyecto Primates Main Database* and query the `observer samples` and `observer activity data` for data collected during the month in question. Export the resulting query as "OS-OA-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
 
 - Open `R` and run the following:
 
 ``` {r}
-### The following code parses the results of a query of `observer samples` and `observer activity data`  Here, we start with a query of two tables in Access 
+# The following code parses the results of a regular query (inner join) of `observer samples` and `observer activity data`; here, we start with a query of two tables in Access...
 
-d <- read_xlsx("OS-OA-query.xlsx", guess_max = 10000) # guess max set close to length of file
+d <- read_xlsx("OS-OA-inner-join-query.xlsx", guess_max = 10000) # guess max set close to length of file
+d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`)
+d <- select(d, -`obs activity data_Obs Sample ID`)
+
+# Alternatively, we can read in the two tables dumped from Access and join them in R...
+
+os <- read_xlsx("observer samples.xlsx", guess_max = 10000) # guess max set close to length of file
+oa <- read_xlsx("obs activity data.xlsx", guess_max = 30000) # guess max set close to length of file
+d <- inner_join(os, oa, by = "Obs Sample ID") # this gives us the same result as doing an inner join query in Access BUT we don't wind up with two variables for Obs Sample ID so the rename step above isn't necessary, nor is the step to drop the second Obs Sample ID variable; we could also use right_join to return all rows of obs activity data plus matching rows of observer samples; these should be equivalent as obs activity data should always have an observer sample parent
+
 d <- rowid_to_column(d, "rowID")
-vars <- c("rowID", "observer samples_Obs Sample ID", "Observer", "Date", "GPS Used", "Time Start", "Time End", "Activity", "obs activity data_Comments")
-d <- select(d,vars)
-d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`, `Comments` = `obs activity data_Comments`)
+vars <- c("rowID", "Obs Sample ID", "Observer", "Date", "GPS Used", "Time Start", "Time End", "Activity")
+d <- select(d, vars)
+d <- arrange(d, `Observer`, `Date`, `Time Start`)
 
-# obs <- as.character(obsEntryDialog(d)) # uncomment this line for interactive selection of observer names from a list
-
-obs <- c("Jacopo Cantoni")
-
-if (obs != "") {d <- filter(d, `Observer` == obs)}
-
-d <- fixdate(d, datefield="Date")
-
-daterange <- c("2017-07-01", "2017-07-31")
-
-# daterange <- as.Date(as.POSIXct(as.numeric(daterangeEntryDialog(d))*86400,origin="1970-01-01")) # uncomment this line for interactive selection of dates to consider
-
+if (length(observers) > 0) {d <- filter(d, `Observer` == observers)}
 if (length(daterange) > 0) {d <- filter(d, Date >= daterange[1] & Date <= daterange[2])}
 
-d <- fixtime(d, datefield="Date", timefield=c("Time Start", "Time End"))
+d <- fixdate(d, datefield="Date")
+d <- fixtime(d, datefield="Date", timefield=c("Time Start", "Time End"), offsetFromGMT=-5, timezone="America/Bogota")
 d <- mutate(d, Duration=`Time End`-`Time Start`)
 units(d$Duration) <- "secs"
-d <- mutate(d, `General Activity` = ifelse(grepl("Field work", `Activity`), "Field work",
-																					 ifelse(grepl("Camp - personal", `Activity`), "Camp - personal",
-																					 			 ifelse(grepl("Camp - project work", `Activity`), "Camp - project work",
-																					 			 			 ifelse(grepl("Travel", `Activity`), "Travel",
-																					 			 			 "Other")))))
+d <- mutate(d, `General Activity` =
+							ifelse(grepl("Field work", `Activity`), "Field work",
+							ifelse(grepl("Camp - personal", `Activity`), "Camp - personal",
+							ifelse(grepl("Camp - project work", `Activity`), "Camp - project work",
+							ifelse(grepl("Travel", `Activity`), "Travel",
+							"Other")))))
 
-# the following gives the records where the duration of an observer activity is <= 0 seconds... these should be checked and corrected in database
-warnings <- d %>% filter(Duration<=0)
+# find records where the duration of an observer activity is <= 0 seconds... these should be checked and corrected in database
+warnings <- d %>% filter(Duration <= 0)
 
 if (!is.null(warnings)) {
 	print("WARNING: Check the following rows of observer activity data as the start and end times entered imply that the activity lasted 0 seconds or less!")
@@ -182,65 +188,180 @@ kable(output_summary, caption="Observer Activity Summary")
 
 #### Generating Section 2.3
 
-- Open the *Proyecto Primates Main Database* and query the `observer samples` and `avistajes` tables for data collected during the month in question. Export the resulting query as "OS-AV-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+- Open the *Proyecto Primates Main Database* and query the `observer samples` and `avistajes` tables for data collected during the month in question. Export the resulting query as "OS-AV-query-right-join.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+
+> NOTE: be sure to do what is known as a RIGHT JOIN, where select all rows from the nested table and match those up with a parent...
 
 - Open `R` and run the following:
 
 ``` {r}
-### The following code parses the results of a query of `observer samples` and `avistajes`
+# The following code parses the results of a regular query (inner join) of `observer samples` and `avistajes`; here, we start with a query of two tables in Access...
 
-d <- read_xlsx("OS-AV-query.xlsx", guess_max = 10000) # guess max set close to length of file
-d <- rowid_to_column(d, "rowID")
-
-vars <- c("rowID", "observer samples_Obs Sample ID", "Observer", "Date", "GPS Used", "Avistaje ID", "Taxon", "Group", "Time Enc", "Time Left/Lost", "Other Observer Present", "Found in Sleep Tree", "Left in Sleep Tree")
-
-d <- select(d,vars)
+d <- read_xlsx("OS-AV-inner-join-query.xlsx", guess_max = 10000) # guess max set close to length of file
 d <- rename(d, `Obs Sample ID` = `observer samples_Obs Sample ID`)
+d <- select(d, -`avistajes_Obs Sample ID`)
 
-obs <- c("Jacopo Cantoni")
+# Alternatively, we can read in two tables dumped from Access and join them in R...
 
-if (obs != "") {d <- filter(d, `Observer` == obs)}
+os <- read_xlsx("observer samples.xlsx", guess_max = 10000) # guess max set close to length of file
+av <- read_xlsx("avistajes.xlsx", guess_max = 30000) # guess max set close to length of file
+d <- inner_join(os, av, by = "Obs Sample ID") # this gives us the same result as doing an inner join query in Access BUT we don't wind up with two variables for Obs Sample ID so the rename step above isn't necessary, nor is the step to drop the second Obs Sample ID variable; we could also use right_join to return all rows of avistaje data plus matching rows of observer samples; these should be equivalent as avistaje data should always have an observer sample parent
 
-d <- fixdate(d, datefield="Date")
+d <- rowid_to_column(d, "rowID")
+vars <- c("rowID", "Obs Sample ID", "Observer", "Date", "GPS Used", "Avistaje ID", "Taxon", "Group", "Time Enc", "Time Left/Lost", "Other Observer Present", "Found in Sleep Tree", "Left in Sleep Tree")
+d <- select(d,vars)
+d <- arrange(d,`Observer`, `Date`, `Time Enc`)
 
-daterange <- c("2017-07-01", "2017-07-31")
-
+if (length(observers) > 0) {d <- filter(d, `Observer` %in% observers)}
 if (length(daterange) > 0) {d <- filter(d, Date >= daterange[1] & Date <= daterange[2])}
+if (length(taxa) > 0) {d <- filter(d, `Taxon` %in% taxa)}
 
-d <- fixtime(d, datefield="Date", timefield=c("Time Enc", "Time Left/Lost"))
-d <- mutate(d, Duration=`Time Left/Lost`-`Time Enc`)
+d <- fixdate(d, datefield="Date") # makes sure that the date is in the correct format
+d <- fixtime(d, datefield="Date", timefield=c("Time Enc", "Time Left/Lost"), offsetFromGMT=-5, timezone="America/Bogota") # makes sure times are in correct format
+d <- mutate(d, Duration=`Time Left/Lost`-`Time Enc`) # calculates avistaje duration
 units(d$Duration) <- "secs"
 
-# the following gives the records where the duration of an avistaje is <= 0 seconds... these should be checked and corrected in database
-warnings <- d %>% filter(Duration < 0 | is.na(Duration))
+# find records where the duration of an avistaje is <= 0 seconds... these should be checked and corrected in database
+warnings <- d %>% filter(Duration <= 0 | is.na(Duration))
 
 if (!is.null(warnings)) {
-	print("WARNING: Check the following rows of observer activity data as the start and end times entered imply that the activity lasted less than 0 seconds or that either Time Enc or Time Left/Lost = NA!")
+	print("WARNING: Check the following avistajes as the times imply that the avistaje lasted < 0 seconds or that either Time Enc or Time Left/Lost = NA!")
 	print(warnings)
 	}
 
-d <- filter(d, `Duration` > 0) # only where AV duration is >0
-
-taxon <- c("Pithecia", "Callicebus")
-d <- filter(d, `Taxon` %in% taxon)
+d <- filter(d, `Duration` > 0) # for summarizing avistajes, pick only those where AV duration is >0
 
 output <- d %>% group_by(`Observer`, `Date`, `Taxon`, `Group`) %>% summarize(`AV Count`=n(), `Duration (hours)`=sum(`Duration`, na.rm = T))
 units(output$`Duration (hours)`) <- "hours"
 
-kable(output, digits=3, caption="Avistajes by Day")
+kable(output, digits=3, caption="Avistajes by Observer and Date")
 
 output_summary <- group_by(output,`Observer`,`Taxon`, `Group`) %>% summarize(`AV Count`=sum(`AV Count`), `Duration (hours)`=sum(`Duration (hours)`))
 units(output_summary$`Duration (hours)`) <- "hours"
 
-kable(output_summary, digits=3, caption="Avistaje Summary")
+kable(output_summary, digits=3, caption="Avistaje Summary by Observer and Group")
 ```
-
 
 #### Generating Section 3.2
 
-- Open the *Proyecto Primates Main Database* and query the `observer samples`, `avistajes`, and `roll call demography` tables for data collected during the month in question. Export the resulting query as "OS-AV-RCD-query.xlsx" in `.xlsx` format. Move that file into the same folder as this document.
+- Open the *Proyecto Primates Main Database* and export the `observer samples`, `avistajes`, and `roll call demography` tables in `.xlsx` format. Move those files into the same folder as this document.
 
 - Open `R` and run the following:
 
 ``` {r}
-### The following code parses the results of a query of `observer samples` and `avistajes`
+# Read in the tables dumped from Access and join them in R
+
+os <- read_xlsx("observer samples.xlsx", guess_max = 10000) # guess max set close to length of file
+os <- fixdate(os, datefield="Date") # makes sure that the date is in the correct format
+av <- read_xlsx("avistajes.xlsx", guess_max = 30000) # guess max set close to length of file
+rc <- read_xlsx("roll call demography.xlsx", guess_max = 30000) # guess max set close to length of file
+
+# first we join roll call demography with avistajes...
+d <- right_join(av, rc, by = "Avistaje ID") # this gives us the same result as doing an right join query in Access BUT we don't wind up with two variables for Avistaje ID so we don't need to rename one of these and drop the other; we could also use inner_join to return all rows of roll call demography with matching rows of avistajes plus NAs for rows that do not have matches in avistajes; these should be equivalent if all roll call demography was taken in context of an avistaje, but if roll call demography data were taken in the context of an observer sample, then right_join is more appropriate than inner_join
+
+# we need to drop a duplicated variable to keep things tidy
+d <- rename(d, `Group` = `Group.y`)
+vars <- c("Obs Sample ID.x","Obs Sample ID.y", "Avistaje ID", "Taxon", "Group","Animal Name", "Status")
+d <- select(d, vars)
+
+d$`Group` <- str_replace_all(d$`Group`,"Lagothix","Lagothrix") # fix spelling!
+d$`Taxon` <- str_replace_all(d$`Taxon`,"Lagothix","Lagothrix") # fix spelling!
+
+# find records where the taxon name and group name are not compatible
+d <- mutate(d, `Taxon from Group` = str_split(`Group`," ",simplify=TRUE)[,1])
+
+warnings <- d %>% filter(`Taxon from Group` != `Taxon` & `Taxon from Group` != "Unknown" & `Taxon from Group` != "Solitary" & `Taxon from Group` != "Solitary?")
+
+if (!is.null(warnings)) {
+	print("WARNING: Check the following records the group name and taxon do not match!")
+	print(warnings)
+	}
+
+# replace Taxon with taxon implied by Group where they don't match
+
+d <- select(d,-`Group`)
+d <- rename(d,`Group`=`Taxon from Group`)
+
+# now, we want to match up any roll call demography rows that had an OS instead of AV as the parent... but now, we need to use some SQL because dplyr won't let us join either this or that columns...
+
+d = sqldf("
+  SELECT *
+  FROM os
+  INNER JOIN d
+  ON os.`Obs Sample ID` = d.`Obs Sample ID.x`
+  OR os.`Obs Sample ID` = d.`Obs Sample ID.y`
+")
+
+d <- rowid_to_column(d, "rowID")
+vars <- c("rowID", "Obs Sample ID", "Observer", "Date", "Avistaje ID", "Taxon", "Group", "Animal Name", "Status")
+d <- select(d, vars)
+
+if (length(observers) > 0) {d <- filter(d, `Observer` %in% observers)}
+if (length(daterange) > 0) {d <- filter(d, Date >= daterange[1] & Date <= daterange[2])}
+if (length(taxa) > 0) {d <- filter(d, `Taxon` %in% taxa)}
+
+d <- filter(d, `Status` == "Confirmed Present" | `Status` == "Radiocollar Checked - Heard")
+
+d$`Animal Name` <- str_replace_all(d$`Animal Name`,"/","") # clean off terminal slash
+
+output <- d %>% group_by(`Taxon`, `Group`, `Animal Name`) %>% summarize(`Times Seen (AV)`=n())
+kable(output, caption="Animals in Roll Call Demography")
+```
+
+#### Generating Section 4.1
+
+- Open the *Proyecto Primates Main Database* and export the `observer samples`, `avistajes`, and `roll call demography` tables in `.xlsx` format. Move those files into the same folder as this document.
+
+- Open `R` and run the following:
+
+``` {r}
+# Read in the tables dumped from Access and join them in R
+
+os <- read_xlsx("observer samples.xlsx", guess_max = 10000) # guess max set close to length of file
+os <- fixdate(os, datefield="Date") # makes sure that the date is in the correct format
+
+av <- read_xlsx("avistajes.xlsx", guess_max = 30000) # guess max set close to length of file
+bs <- read_xlsx("biological samples.xlsx", guess_max = 30000) # guess max set close to length of file
+bs <- fixdate(bs, datefield="Sample Date") # makes sure that the date is in the correct format
+bs <- fixtime(bs, datefield="Sample Date", timefield="Sample Time", offsetFromGMT=-5, timezone="America/Bogota") # makes sure times are in correct format
+
+bs <- rename(bs, `Avistaje ID` = `Related Avistaje ID`)
+
+# first we join biological samples with avistajes...
+d <- right_join(av, bs, by = "Avistaje ID") # this gives us the same result as doing an right join query in Access BUT we don't wind up with two variables for Avistaje ID so we don't need to rename one of these and drop the other; we could also use inner_join to return all rows of biological samples with matching rows of avistajes plus NAs for rows that do not have matches in avistajes; these should be equivalent if all biological samples were taken in context of an avistaje, but if biological samples were taken in the context of an observer sample, then right_join is more appropriate than inner_join
+
+# we need to drop a duplicated variable to keep things tidy
+d <- rename(d, `Group` = `Group.x`, `Taxon` = `Taxon.x`)
+vars <- c("Obs Sample ID.x","Obs Sample ID.y", "Avistaje ID", "Taxon", "Group","Biological Sample Label", "Sample Date", "Sample Time", "Type of Sample", "Collected By", "Alternate Sample Name", "Individual", "Sex Class", "Age Class", "Botanical Sample Label")
+d <- select(d, vars)
+
+# find records where the taxon name and group name are not compatible
+d <- mutate(d, `Taxon from Group` = str_split(`Group`," ",simplify=TRUE)[,1])
+
+warnings <- d %>% filter(`Taxon from Group` != `Taxon` & `Taxon from Group` != "Unknown" & `Taxon from Group` != "Solitary" & `Taxon from Group` != "Solitary?")
+
+if (!is.null(warnings)) {
+	print("WARNING: Check the following records the group name and taxon do not match!")
+	print(warnings)
+	}
+
+# replace Taxon with taxon implied by Group where they don't match
+
+d <- select(d,-`Group`)
+d <- rename(d,`Group`=`Taxon from Group`)
+
+# now, we want to match up any biological samples rows that had an OS instead of AV as the parent... but now, we need to use some SQL because dplyr won't let us join either this or that columns...
+
+d = sqldf("
+  SELECT *
+  FROM os
+  INNER JOIN d
+  ON os.`Obs Sample ID` = d.`Obs Sample ID.x`
+  OR os.`Obs Sample ID` = d.`Obs Sample ID.y`
+")
+
+d <- rowid_to_column(d, "rowID")
+vars <- c("rowID", "Obs Sample ID", "Observer", "Date", "Avistaje ID", "Taxon", "Group", "Biological Sample Label", "Sample Date", "Sample Time", "Type of Sample", "Collected By", "Alternate Sample Name", "Individual", "Sex Class", "Age Class", "Botanical Sample Label")
+d <- select(d, vars)
+
+```
