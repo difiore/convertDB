@@ -1,21 +1,6 @@
----
-title: "Untitled"
-author: "Tony Di Fiore"
-date: "10/9/2017"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-4.1 - A summary table of total avista
+When an important event (for example a fight between two groups) is witnessed, a brief, yet detailed, narrative description of the event should be included in the report. As you prepare each section, you will have to relate your narrative part to the quantitative part. The function of the narrative part is also to summarize what you did that month.
 
 
-The narrative section for each part of the report should be minimized.  When an important event is witnessed a Word document with a brief, yet detailed, description of the event is required (for example a fight between two groups) and should be attached and referenced in the report.As you prepare each section you will have to relate your narrative part to the quantitative part. The function of the narrative part is also to summarize what you did that month.
-
-
-2- A quantitative section with various tables summarizing data collected over the past month
 3- A logistics section, which should be used for reporting on equipment issues, computer issues, permits, assistants, etc.
 
 The field/lab work section should includes information which is only related to work in the forest, lab work done associated with processing samples, other campañas done on that month.  One can think of the “Field/Lab Work” section as the data collection aspect of the research.
@@ -26,19 +11,10 @@ The Logistics section
 
 Each section may have a narrative part and a quantitative part in order to develop a sound report that will describe your overall work of that month so that the directors and managers can schedule the work for the upcoming month.
 
-
-
 The quantitative part is crucial because it is the one that will tell us that all the data have been entered, cleaned and organized.
 
 
 
-FIELD WORK
-
-Narrative Section
-
-Circle or highlight the corresponding important events:
-
-Intergroup Encounters     Dispersal     Adult Replacement     Vocalizations     Sexual Behavior       Anything else remarkable or unusual
 
 
 Quantitative Section
@@ -281,3 +257,17 @@ return all rows from x where there are not matching values in y, keeping just co
 
 full_join()
 return all rows and all columns from both x and y. Where there are not matching values, returns NA for the one missing.
+
+
+library(rvest)
+feed_items <- read_xml("http://twiv.microbeworld.libsynpro.com/twiv") %>%
+  xml_nodes("item")
+Podcast date is stored in pubDate and duration in itunes:duration, so we can extract the text between those tags:
+
+feed_items %>% 
+  xml_nodes("pubDate") %>% 
+  xml_text()
+
+feed_items %>% 
+  xml_nodes("itunes\\:duration") %>% 
+  xml_text()

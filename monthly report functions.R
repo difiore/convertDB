@@ -26,7 +26,7 @@ fixtime <- function(x, datefield, timefield, offsetFromGMT, timezone){
 	return(x)
 }
 
-obsEntryDialog <- function(d) {
+ obsEntryDialog <- function(d) {
 	obslist <- sort(unique(d$Observer))
 	require(tcltk2)
 	win <- tktoplevel()
